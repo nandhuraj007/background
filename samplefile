@@ -1,0 +1,95 @@
+To achieve this functionality in Flutter, you'll need to use a combination of SharedPreferences to store the timestamp when the text should change and a background process like flutter_workmanager to periodically check the timestamp and update the text accordingly. Here's a step-by-step guide:
+
+Setup:
+First, you need to include the required dependencies in your pubspec.yaml file:
+
+yaml
+Copy code
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.0.12
+  flutter_workmanager: ^0.4.0
+Implementing the UI:
+Create a Flutter app with a simple UI containing the text that you want to change. In this example, I'll create a page with a Text widget that displays either "hai" or "happy" based on the condition.
+
+dart
+Copy code
+import 'package:flutter/material.dart';
+
+void main() => runApp(MyApp());
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: MyPage(),
+    );
+  }
+}
+
+class MyPage extends StatefulWidget {
+  @override
+  _MyPageState createState() => _MyPageState();
+}
+
+class _MyPageState extends State<MyPage> {
+  String _displayText = "hai";
+
+  @override
+  void initState() {
+    super.initState();
+    _updateDisplayText();
+  }
+
+  void _updateDisplayText() async {
+    // Check if enough time has passed to change the text
+    bool shouldChangeText = await shouldChangeText();
+    setState(() {
+      _displayText = shouldChangeText ? "happy" : "hai";
+    });
+  }
+
+  Future<bool> shouldChangeText() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int timestamp = prefs.getInt('timestamp') ?? 0;
+    int currentTime = DateTime.now().millisecondsSinceEpoch;
+    return currentTime - timestamp >= 8000 * 1000; // 8000 seconds
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Text Changer"),
+      ),
+      body: Center(
+        child: Text(
+          _displayText,
+          style: TextStyle(fontSize: 24),
+        ),
+      ),
+    );
+  }
+}
+Implementing Background Task:
+To update the text even when the app is closed, you can use flutter_workmanager to schedule a background task that periodically checks and updates the text.
+
+dart
+Copy code
+import 'package:flutter_workmanager/flutter_workmanager.dart';
+
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) {
+    _updateDisplayText();
+    return Future.value(true);
+  });
+}
+
+void main() {
+  Workmanager().initialize(callbackDispatcher);
+  runApp(MyApp());
+}
+Remember that Flutter is not intended for long-running background processes, and there might be limitations based on the platform and device. Also, handling background tasks requires careful consideration of battery usage and performance.
+
+Please note that the above example is a basic demonstration. In a real-world scenario, you might need to handle more edge cases and ensure the background task behaves as expected across different devices and platforms.sample file
